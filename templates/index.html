@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sign Language Detection Studio | Real-Time AI Recognition</title>
+  <meta name="description" content="State-of-the-art real-time sign language recognition with MediaPipe, Scikit-Learn, and high-performance WebRTC camera streaming.">
+  
+  <!-- Modern Typography from Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Outfit:wght@500;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+  
+  <!-- Separate CSS Folder Architecture -->
+  <link rel="stylesheet" href="/static/css/style.css">
+  <link rel="stylesheet" href="/static/css/components.css">
+  <link rel="stylesheet" href="/static/css/animations.css">
+</head>
+<body>
+
+  <!-- Hidden SVG for Gradients -->
+  <svg style="position: absolute; width: 0; height: 0; overflow: hidden;" version="1.1" xmlns="http://www.w3.org/2000/svg">
+    <defs>
+      <linearGradient id="gaugeGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+        <stop offset="0%" stop-color="#00f2fe" />
+        <stop offset="50%" stop-color="#4facfe" />
+        <stop offset="100%" stop-color="#10b981" />
+      </linearGradient>
+    </defs>
+  </svg>
+
+  <div class="app-container">
+
+    <!-- Header Navigation Bar -->
+    <header class="app-header">
+      <div class="brand-section">
+        <div class="brand-logo-icon">🤟</div>
+        <div class="brand-titles">
+          <h1>Sign Language Studio <span class="badge-version">AI PRO</span></h1>
+          <p class="brand-subtitle">Real-time gesture recognition & natural speech translation</p>
+        </div>
+      </div>
+
+      <div class="header-status-group">
+        <div class="status-pill" id="headerModelStatus">
+          <span class="status-dot active"></span>
+          <span>Model: Random Forest (4 Classes)</span>
+        </div>
+      </div>
+    </header>
+
+    <!-- Main Workspace Grid -->
+    <main class="workspace-grid">
+
+      <!-- LEFT COLUMN: CAMERA FEED & SENTENCE TRANSLATION -->
+      <section class="feed-column">
+
+        <!-- Camera Viewport Card -->
+        <div class="glass-card video-card">
+          <div class="card-header">
+            <h2 class="card-title">
+              <span class="icon">📷</span> Live Video Viewport
+            </h2>
+            <div class="card-badge" id="hudResolution">640x480</div>
+          </div>
+
+          <!-- Video Canvas Viewport -->
+          <div class="viewport-container hud-corners">
+            <!-- Scanline Effect -->
+            <div class="scanline-effect"></div>
+
+            <!-- Viewport HUD Overlay -->
+            <div class="viewport-hud">
+              <div class="hud-top">
+                <div class="hud-badge" id="hudStatus">
+                  <span class="status-dot"></span> CAMERA READY
+                </div>
+                <div class="hud-badge mono" id="hudFps">0 FPS</div>
+              </div>
+            </div>
+
+            <!-- Mirrored HTML5 Video & Canvas Elements -->
+            <video id="webcamVideo" class="viewport-video" autoplay playsinline muted></video>
+            <canvas id="landmarkCanvas" class="viewport-canvas"></canvas>
+
+            <!-- Server MJPEG Stream (Fallback / Alternate Mode) -->
+            <img id="serverMjpeg" class="viewport-mjpeg" alt="Server Camera Feed">
+
+            <!-- Placeholder State -->
+            <div id="viewportPlaceholder" class="viewport-placeholder">
+              <div class="placeholder-icon">📷</div>
+              <h3>Webcam Feed Inactive</h3>
+              <p>Click "Start Camera" below to initiate real-time gesture recognition.</p>
+              <button class="btn btn-primary" onclick="document.getElementById('btnStartCam').click()">
+                ⚡ Start Camera
+              </button>
+            </div>
+          </div>
+
+          <!-- Camera Controls Toolbar -->
+          <div class="camera-controls-bar">
+            <div class="control-btn-group">
+              <button id="btnStartCam" class="btn btn-primary">
+                ▶ Start Camera
+              </button>
+              <button id="btnStopCam" class="btn btn-danger" style="display: none;">
+                ⏹ Stop Camera
+              </button>
+              <button id="btnMirror" class="btn btn-secondary btn-icon-only" title="Toggle Mirror Flip">
+                🔄
+              </button>
+            </div>
+
+            <div class="control-btn-group">
+              <!-- Select Camera Device -->
+              <select id="cameraSelect" class="select-input" title="Choose Video Input Device">
+                <option value="">Default Webcam</option>
+              </select>
+
+              <!-- Feed Mode Select -->
+              <select id="modeSelect" class="select-input" title="Streaming Engine">
+                <option value="browser">Browser Webcam (Direct)</option>
+                <option value="server">Server OpenCV Feed</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <!-- Live Sentence Builder & Translation Card -->
+        <div class="glass-card sentence-builder-card">
+          <div class="card-header">
+            <h2 class="card-title">
+              <span class="icon">💬</span> Sign-to-Speech Sentence Builder
+            </h2>
+            <div class="tts-toggle-group">
+              <span>Auto-Speak</span>
+              <label class="switch" title="Automatically speak detected gestures aloud">
+                <input type="checkbox" id="toggleTTS" checked>
+                <span class="slider"></span>
+              </label>
+            </div>
+          </div>
+
+          <!-- Sentence Accumulator Box -->
+          <div id="sentenceBox" class="sentence-display-box">
+            <span class="sentence-empty-hint">Detected gestures will formulate into translated text here...</span>
+          </div>
+
+          <!-- Actions Bar -->
+          <div class="sentence-actions-bar">
+            <div class="control-btn-group">
+              <button id="btnSpeakSentence" class="btn btn-primary">
+                🔊 Speak Aloud
+              </button>
+              <button id="btnCopySentence" class="btn btn-secondary">
+                📋 Copy Text
+              </button>
+            </div>
+            <div class="control-btn-group">
+              <button id="btnBackspace" class="btn btn-secondary btn-icon-only" title="Delete Last Word">
+                ⌫
+              </button>
+              <button id="btnClearSentence" class="btn btn-danger" title="Clear Entire Sentence">
+                🗑 Clear
+              </button>
+            </div>
+          </div>
+        </div>
+
+      </section>
+
+      <!-- RIGHT COLUMN: INSIGHTS, PREDICTIONS & TELEMETRY -->
+      <section class="insights-column">
+
+        <!-- Hero Prediction Card -->
+        <div class="glass-card hero-prediction-card">
+          <div class="hero-layout">
+            <div class="hero-info-left">
+              <span class="hero-subtitle">Recognized Gesture</span>
+              <div class="hero-label-wrapper">
+                <span id="heroIcon" class="hero-icon">✋</span>
+                <span id="heroGesture" class="hero-gesture-name">Waiting...</span>
+              </div>
+              <p id="heroMeaning" class="hero-meaning">Position hand in front of camera</p>
+            </div>
+
+            <!-- Circular SVG Confidence Meter -->
+            <div class="confidence-gauge-container">
+              <div class="circular-gauge">
+                <svg viewBox="0 0 100 100">
+                  <circle class="gauge-bg" cx="50" cy="50" r="40"></circle>
+                  <circle id="gaugeFill" class="gauge-fill" cx="50" cy="50" r="40"></circle>
+                </svg>
+                <div class="gauge-text">
+                  <span id="gaugeValue" class="gauge-value">0%</span>
+                  <span class="gauge-label">Confidence</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Class Probabilities Breakdown -->
+        <div class="glass-card">
+          <div class="card-header">
+            <h2 class="card-title">
+              <span class="icon">📊</span> Gesture Probability Distribution
+            </h2>
+            <span class="card-badge">Multiclass Softmax</span>
+          </div>
+          <div id="probabilitiesList" class="probabilities-list">
+            <!-- Dynamically populated rows -->
+          </div>
+        </div>
+
+        <!-- Gesture Reference Guide Gallery -->
+        <div class="glass-card">
+          <div class="card-header">
+            <h2 class="card-title">
+              <span class="icon">📖</span> Gesture Reference Library
+            </h2>
+            <span class="card-badge">4 Classes</span>
+          </div>
+          <div id="gestureGrid" class="gesture-grid">
+            <!-- Dynamically populated cards -->
+          </div>
+        </div>
+
+        <!-- System & Telemetry Strip -->
+        <div class="glass-card">
+          <div class="card-header">
+            <h2 class="card-title">
+              <span class="icon">⚡</span> System Telemetry & Model Ops
+            </h2>
+            <button id="btnRetrain" class="btn btn-secondary" style="font-size: 0.75rem; padding: 0.35rem 0.75rem;">
+              ⚡ Retrain Model
+            </button>
+          </div>
+          
+          <div class="telemetry-strip">
+            <div class="metric-pill">
+              <span class="metric-pill-label">FPS Rate</span>
+              <span id="metricFps" class="metric-pill-val text-cyan">0</span>
+            </div>
+            <div class="metric-pill">
+              <span class="metric-pill-label">Latency</span>
+              <span id="metricLatency" class="metric-pill-val text-emerald">0 ms</span>
+            </div>
+            <div class="metric-pill">
+              <span class="metric-pill-label">Hand State</span>
+              <span id="metricHandState" class="metric-pill-val" style="font-size: 0.85rem;">Standby</span>
+            </div>
+            <div class="metric-pill">
+              <span class="metric-pill-label">Samples</span>
+              <span id="metricTotalSamples" class="metric-pill-val text-purple">800</span>
+            </div>
+          </div>
+          <div id="trainingStatus" style="font-size: 0.75rem; color: var(--accent-amber); margin-top: 0.5rem; text-align: center;"></div>
+        </div>
+
+      </section>
+    </main>
+
+    <!-- Footer -->
+    <footer class="app-footer">
+      <div>Sign Language Detection Studio &bull; MediaPipe Hands &bull; Random Forest Classifier</div>
+      <div>Frontend Architecture: HTML5 + Vanilla CSS (<span class="mono">static/css/</span>) + Vanilla JS</div>
+    </footer>
+
+  </div>
+
+  <!-- Client Application Script -->
+  <script src="/static/js/app.js"></script>
+</body>
+</html>

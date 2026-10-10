@@ -1,8 +1,7 @@
+Flask>=3.0.0
+flask-cors>=5.0.0
 numpy<2
 mediapipe==0.10.21
 opencv-python
 scikit-learn
 pandas
-streamlit
-streamlit-webrtc
-av
