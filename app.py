@@ -209,7 +209,8 @@ def api_predict():
 
         with model_lock:
             if current_model is not None:
-                probabilities = current_model.predict_proba([features])[0]
+                features_df = pd.DataFrame([features], columns=FEATURE_COLUMNS)
+                probabilities = current_model.predict_proba(features_df)[0]
                 best_idx = probabilities.argmax()
                 prediction = str(current_model.classes_[best_idx])
                 confidence = float(probabilities[best_idx])
@@ -363,7 +364,8 @@ def generate_cv_frames():
 
                 with model_lock:
                     if current_model is not None:
-                        probs = current_model.predict_proba([features])[0]
+                        features_df = pd.DataFrame([features], columns=FEATURE_COLUMNS)
+                        probs = current_model.predict_proba(features_df)[0]
                         best = probs.argmax()
                         label = str(current_model.classes_[best])
                         conf = float(probs[best])
