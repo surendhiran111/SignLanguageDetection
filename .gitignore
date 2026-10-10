@@ -2,7 +2,3 @@
 __pycache__/
 *.pyc
 .DS_Store
-
-# Generated dataset and trained model
-dataset/gestures.csv
-models/model.pkl
